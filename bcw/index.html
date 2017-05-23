@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html>
+<head>
+    <!--Import Google Icon Font-->
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--Import materialize.css-->
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
+
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <style>
+        .cup-size {
+            font-size: 60px;
+            font-family: "Arial Black", Gadget, sans-serif;
+        }
+    </style>
+</head>
+<title>
+    BreastsCheck!
+</title>
+<body>
+<!--Import jQuery before materialize.js-->
+<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="js/materialize.min.js"></script>
+
+
+<script>
+    (function () {window.BrestsCheck = {} }());
+    window.addEventListener("devicemotion", function(evt){
+        if (typeof(window.BrestsCheck.isMeasurement) === "undefined") {
+            window.BrestsCheck.isMeasurement = false;
+            setInterval(function(){window.BrestsCheck.isMeasurement = true;}, 500);
+        }
+        if (window.BrestsCheck.isMeasurement === false) return;
+        //傾き
+        var zg = evt.accelerationIncludingGravity.z;
+        $('#debug-message').text("z: "+zg); //TODO デバッグ用
+
+        //計測開始中はリクエスト送信ように傾きを保持する
+        if (typeof(window.BrestsCheck.isMeasurement) !== "undefined"
+             && window.BrestsCheck.isStart === true) {
+            window.BrestsCheck.gradients.push(zg)
+        }
+        window.BrestsCheck.isMeasurement = false;
+    }, true);
+
+
+    function request() {
+        console.log("start request");
+        //くるくるを可視化
+        $('#preloader').css('display', 'inline-block');
+        $('#message').text("");
+        window.BrestsCheck.isStart = true;
+        window.BrestsCheck.gradients = [];
+        setTimeout(function(){
+            //リクエストパラメータ
+            var height = document.getElementById("height").value;
+            var gradients = window.BrestsCheck.gradients;
+            $.ajax({
+                type: "POST",
+                url: "https://j5zqpnnz67.execute-api.ap-northeast-1.amazonaws.com/dev/size",
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': '00000000000000000000',
+                },
+                data: JSON.stringify({ height: height, gradients: gradients }),
+                success: function(response){
+                    $('#result_text_1').text(response.cup[0]);
+                    $('#result_text_2').text(response.cup[1]);
+                    $('#message').text("計測完了");
+                    $('#preloader').css('display', 'none');
+                },
+                error: function(xhr, textStatus, errorThrown) {
+                    $('#message').text(JSON.parse(xhr.responseText).message);
+                    $('#preloader').css('display', 'none');
+                }
+            });
+            window.BrestsCheck.isStart = false;
+        }, 3000);
+    };
+</script>
+
+    <nav style="margin-bottom: 30px">
+        <div class="nav-wrapper">
+            <a href="" class="brand-logo">BreastsCheck!</a>
+            <ul id="nav-mobile" class="right hide-on-med-and-down">
+            </ul>
+        </div>
+    </nav>
+    <div class="row" style="padding: 5px">
+    身長を選択してください
+    <form action="#">
+        <p class="range-field" style="width: 400px">
+            <input type="range" id="height" min="135" max="185" />
+            (cm)
+        </p>
+    </form>
+    <br>
+    ↓の画像のように、<span style="font-weight: bold;">壁に背中をピッタリつけて姿勢を真っ直ぐにした状態で</span>、計測ボタンをタップして３秒待ってください。<br>
+    <div class="row">
+        <div class="col">
+            <img src="./img/aa1.png">
+        </div>
+        <div id="result" class="col" style="padding: 5px">
+            バストサイズ：
+            <div class="cup-size" id="result_text_1">-</div>
+            または、
+            <div class="cup-size" id="result_text_2">-</div>
+        </div>
+    </div>
+        <div class="row">
+            <div class="col s4.5">
+                <a class="waves-effect waves-light btn" onclick="request()">計測開始</a>
+            </div>
+            <div class="col s4.5" id="preloader" style="display: none">
+                <div class="preloader-wrapper small active">
+                    <div class="spinner-layer spinner-green-only">
+                        <div class="circle-clipper left">
+                            <div class="circle"></div>
+                        </div><div class="gap-patch">
+                        <div class="circle"></div>
+                    </div><div class="circle-clipper right">
+                        <div class="circle"></div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+<div class="row" style="padding: 5px">
+    <div id="message"></div>
+    <div id="debug-message"></div>
+</div>
+</body>
+</html>
